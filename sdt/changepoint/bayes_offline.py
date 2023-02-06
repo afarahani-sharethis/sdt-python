@@ -314,9 +314,10 @@ class FullCovObsLikelihood(_DynPLikelihood):
     See *Xuan Xiang, Kevin Murphy: "Modeling Changing Dependency Structure
     in Multivariate Time Series", ICML (2007), pp. 1055--1062*.
     """
-    def __init__(self):
+    def __init__(self, dprior):
         super().__init__()
         self._data = np.empty((0, 0))
+        self.dprior = dprior
 
     def _likelihood(self, t, s):
         s += 1
@@ -324,7 +325,7 @@ class FullCovObsLikelihood(_DynPLikelihood):
         x = self._data[t:s]
         dim = x.shape[1]
 
-        N0 = dim  # weakest prior we can use to retain proper prior
+        N0 = dim * self.dprior # weakest prior we can use to retain proper prior
         V0 = np.var(x) * np.eye(dim)
 
         Vn = V0 + np.einsum("ij, ik -> jk", x, x)
@@ -343,8 +344,9 @@ class FullCovObsLikelihoodNumba:
     See *Xuan Xiang, Kevin Murphy: "Modeling Changing Dependency Structure
     in Multivariate Time Series", ICML (2007), pp. 1055--1062*.
     """
-    def __init__(self):
+    def __init__(self, dprior):
         self._data = np.empty((0, 0))
+        self.dprior = dprior
 
     def set_data(self, data):
         """Set data for calculation of the likelihood
@@ -356,7 +358,7 @@ class FullCovObsLikelihoodNumba:
         """
         self._data = data
 
-    def likelihood(self, t, s):
+    def likelihood(self, t, s, n0_prior=1):
         """Get likelihood
 
         Parameters
@@ -374,7 +376,7 @@ class FullCovObsLikelihoodNumba:
         x = self._data[t:s]
         dim = x.shape[1]
 
-        N0 = dim  # weakest prior we can use to retain proper prior
+        N0 = dim * self.dprior  # weakest prior we can use to retain proper prior
         V0 = np.var(x) * np.eye(dim)
 
         einsum = np.zeros((x.shape[1], x.shape[1]))
