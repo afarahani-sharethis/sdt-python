@@ -366,65 +366,73 @@ class FullCovObsLikelihood(_DynPLikelihood):
         )
 
 
-@numba.jitclass([("_data", numba.float64[:, :])])
-class FullCovObsLikelihoodNumba:
-    """Full covariance model from Xuan et al.
+FullCovObsLikelihoodNumba = numba.jitclass(
+    [
+        ("_data", numba.float64[:, :]),
+        ("dprior", numba.float64),
+        ("vprior", numba.float64),
+    ]
+)(FullCovObsLikelihood)
 
-    See *Xuan Xiang, Kevin Murphy: "Modeling Changing Dependency Structure
-    in Multivariate Time Series", ICML (2007), pp. 1055--1062*.
-    """
+# @numba.jitclass([("_data", numba.float64[:, :])])
+# class FullCovObsLikelihoodNumba:
+#     """Full covariance model from Xuan et al.
 
-    def __init__(self, dprior, vprior):
-        self._data = np.empty((0, 0))
-        self.dprior = dprior
-        self.vprior = vprior
+#     See *Xuan Xiang, Kevin Murphy: "Modeling Changing Dependency Structure
+#     in Multivariate Time Series", ICML (2007), pp. 1055--1062*.
+#     """
 
-    def set_data(self, data):
-        """Set data for calculation of the likelihood
+#     def __init__(self, dprior, vprior):
+#         self._data = np.empty((0, 0))
+#         self._dprior = dprior
+#         self._vprior = vprior
 
-        Parameters
-        ----------
-        data : numpy.ndarray, shape(n, m)
-            m datasets of n data points
-        """
-        self._data = data
+#     def set_data(self, data):
+#         """Set data for calculation of the likelihood
 
-    def likelihood(self, t, s):
-        """Get likelihood
+#         Parameters
+#         ----------
+#         data : numpy.ndarray, shape(n, m)
+#             m datasets of n data points
+#         """
+#         self._data = data
 
-        Parameters
-        ----------
-        t, s : int
-            First and last time point to consider
+#     def likelihood(self, t, s):
+#         """Get likelihood
 
-        Returns
-        -------
-        float
-            likelihood
-        """
-        s += 1
-        n = s - t
-        x = self._data[t:s]
-        dim = x.shape[1]
+#         Parameters
+#         ----------
+#         t, s : int
+#             First and last time point to consider
 
-        N0 = dim * self.dprior  # optional change in prior by muliplier dprior
-        V0 = (np.var(x) * self.vprior) * np.eye(dim)
+#         Returns
+#         -------
+#         float
+#             likelihood
+#         """
+#         s += 1
+#         n = s - t
+#         x = self._data[t:s]
+#         dim = x.shape[1]
 
-        einsum = np.zeros((x.shape[1], x.shape[1]))
-        for j in range(x.shape[1]):
-            for k in range(x.shape[1]):
-                for i in range(x.shape[0]):
-                    einsum[j, k] += x[i, j] * x[i, k]
-        Vn = V0 + einsum
+#         N0 = dim * self.dprior  # optional change in prior by muliplier dprior
+#         V0 = (np.var(x) * self.vprior) * np.eye(dim)
 
-        # section 3.2 from Xuan paper:
-        return (
-            -(dim * n / 2) * _log_pi
-            + N0 / 2 * np.linalg.slogdet(V0)[1]
-            - numba.multigammaln(N0 / 2, dim)
-            + numba.multigammaln((N0 + n) / 2, dim)
-            - (N0 + n) / 2 * np.linalg.slogdet(Vn)[1]
-        )
+#         einsum = np.zeros((x.shape[1], x.shape[1]))
+#         for j in range(x.shape[1]):
+#             for k in range(x.shape[1]):
+#                 for i in range(x.shape[0]):
+#                     einsum[j, k] += x[i, j] * x[i, k]
+#         Vn = V0 + einsum
+
+#         # section 3.2 from Xuan paper:
+#         return (
+#             -(dim * n / 2) * _log_pi
+#             + N0 / 2 * np.linalg.slogdet(V0)[1]
+#             - numba.multigammaln(N0 / 2, dim)
+#             + numba.multigammaln((N0 + n) / 2, dim)
+#             - (N0 + n) / 2 * np.linalg.slogdet(Vn)[1]
+#         )
 
 
 class _ScipyLogsumexp:
