@@ -366,13 +366,7 @@ class FullCovObsLikelihood(_DynPLikelihood):
         )
 
 
-@numba.jitclass(
-    [
-        ("_data", numba.float64[:, :]),
-        ("dprior", numba.float64),
-        ("vprior", numba.float64),
-    ]
-)
+@numba.jitclass([("_data", numba.float64[:, :])])
 class FullCovObsLikelihoodNumba:
     """Full covariance model from Xuan et al.
 
