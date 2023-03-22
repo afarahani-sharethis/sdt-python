@@ -28,6 +28,7 @@ class ConstPrior:
 
     :math:`P(t) = 1 / (\\text{len}(data) + 1)`
     """
+
     def __init__(self):
         self._data = np.empty((0, 0))
         self._prior = np.NaN
@@ -60,7 +61,8 @@ class ConstPrior:
 
 
 ConstPriorNumba = numba.jitclass(
-    [("_data", numba.float64[:, :]), ("_prior", numba.float64)])(ConstPrior)
+    [("_data", numba.float64[:, :]), ("_prior", numba.float64)]
+)(ConstPrior)
 
 
 class GeometricPrior:
@@ -68,6 +70,7 @@ class GeometricPrior:
 
     :math:`P(t) =  p (1 - p)^{t - 1}`
     """
+
     def __init__(self, p):
         """Parameters
         ----------
@@ -100,11 +103,12 @@ class GeometricPrior:
         float
             Prior probability for time point `t`
         """
-        return self.p * (1 - self.p)**(t - 1)
+        return self.p * (1 - self.p) ** (t - 1)
 
 
 GeometricPriorNumba = numba.jitclass(
-    [("_data", numba.float64[:, :]), ("p", numba.float64)])(GeometricPrior)
+    [("_data", numba.float64[:, :]), ("p", numba.float64)]
+)(GeometricPrior)
 
 
 class NegBinomialPrior:
@@ -112,6 +116,7 @@ class NegBinomialPrior:
 
     :math:`P(t) =  {{t - k}\choose{k - 1}} p^k (1 - p)^{t - k}`
     """
+
     def __init__(self, k, p):
         """Parameters
         ----------
@@ -147,12 +152,16 @@ class NegBinomialPrior:
         float
             Prior probability for time point `t`
         """
-        return (scipy.special.comb(t - self.k, self.k - 1) *
-                self.p**self.k * (1 - self.p)**(t - self.k))
+        return (
+            scipy.special.comb(t - self.k, self.k - 1)
+            * self.p**self.k
+            * (1 - self.p) ** (t - self.k)
+        )
 
 
 class _DynPLikelihood:
     """Base class for caching observation likelihood results"""
+
     def __init__(self):
         self._cache = {}
 
@@ -187,6 +196,7 @@ class _DynPLikelihood:
 
 class _GaussianObsLikelihoodBase:
     """Gaussian observation likelihood"""
+
     def __init__(self):
         self._data = np.empty((0, 0))
 
@@ -224,24 +234,32 @@ class _GaussianObsLikelihoodBase:
         muT = n * mean / (1 + n)
         nuT = 1 + n
         alphaT = 1 + n / 2
-        betaT = (1 + 0.5 * ((self._data[t:s] - mean)**2).sum(0) +
-                 n / (1 + n) * mean**2 / 2)
+        betaT = (
+            1
+            + 0.5 * ((self._data[t:s] - mean) ** 2).sum(0)
+            + n / (1 + n) * mean**2 / 2
+        )
         scale = betaT * (nuT + 1) / (alphaT * nuT)
 
-        prob = np.sum(np.log(1 + (self._data[t:s] - muT)**2 / (nuT * scale)))
-        lgA = (math.lgamma((nuT + 1) / 2) - np.log(np.sqrt(np.pi * nuT * scale)) -
-               math.lgamma(nuT / 2))
+        prob = np.sum(np.log(1 + (self._data[t:s] - muT) ** 2 / (nuT * scale)))
+        lgA = (
+            math.lgamma((nuT + 1) / 2)
+            - np.log(np.sqrt(np.pi * nuT * scale))
+            - math.lgamma(nuT / 2)
+        )
 
         return np.sum(n * lgA - (nuT + 1) / 2 * prob)
 
 
 class GaussianObsLikelihood(_DynPLikelihood, _GaussianObsLikelihoodBase):
     """Gaussian observation likelihood"""
+
     pass
 
 
-GaussianObsLikelihoodNumba = numba.jitclass(
-    [("_data", numba.float64[:, :])])(_GaussianObsLikelihoodBase)
+GaussianObsLikelihoodNumba = numba.jitclass([("_data", numba.float64[:, :])])(
+    _GaussianObsLikelihoodBase
+)
 
 
 class _IfmObsLikelihoodBase:
@@ -250,6 +268,7 @@ class _IfmObsLikelihoodBase:
     See *Xuan Xiang, Kevin Murphy: "Modeling Changing Dependency Structure in
     Multivariate Time Series", ICML (2007), pp. 1055--1062*.
     """
+
     def __init__(self):
         self._data = np.empty((0, 0))
 
@@ -290,9 +309,12 @@ class _IfmObsLikelihoodBase:
         Vn = V0 + (x**2).sum(0)
 
         # Sum over dimension and return (section 3.1 from Xuan paper):
-        return (d * (-(n / 2) * _log_pi + (N0 / 2) * np.log(V0) -
-                     math.lgamma(N0 / 2) + math.lgamma((N0 + n) / 2)) -
-                np.sum(((N0 + n) / 2) * np.log(Vn), axis=0))
+        return d * (
+            -(n / 2) * _log_pi
+            + (N0 / 2) * np.log(V0)
+            - math.lgamma(N0 / 2)
+            + math.lgamma((N0 + n) / 2)
+        ) - np.sum(((N0 + n) / 2) * np.log(Vn), axis=0)
 
 
 class IfmObsLikelihood(_DynPLikelihood, _IfmObsLikelihoodBase):
@@ -301,11 +323,13 @@ class IfmObsLikelihood(_DynPLikelihood, _IfmObsLikelihoodBase):
     See *Xuan Xiang, Kevin Murphy: "Modeling Changing Dependency Structure in
     Multivariate Time Series", ICML (2007), pp. 1055--1062*.
     """
+
     pass
 
 
-IfmObsLikelihoodNumba = numba.jitclass(
-    [("_data", numba.float64[:, :])])(_IfmObsLikelihoodBase)
+IfmObsLikelihoodNumba = numba.jitclass([("_data", numba.float64[:, :])])(
+    _IfmObsLikelihoodBase
+)
 
 
 class FullCovObsLikelihood(_DynPLikelihood):
@@ -314,6 +338,7 @@ class FullCovObsLikelihood(_DynPLikelihood):
     See *Xuan Xiang, Kevin Murphy: "Modeling Changing Dependency Structure
     in Multivariate Time Series", ICML (2007), pp. 1055--1062*.
     """
+
     def __init__(self, dprior, vprior):
         super().__init__()
         self._data = np.empty((0, 0))
@@ -326,25 +351,35 @@ class FullCovObsLikelihood(_DynPLikelihood):
         x = self._data[t:s]
         dim = x.shape[1]
 
-        N0 = dim * self.dprior # optional change in prior by muliplier dprior
-        V0 = (np.var(x)*self.vprior) * np.eye(dim)
+        N0 = dim * self.dprior  # optional change in prior by muliplier dprior
+        V0 = (np.var(x) * self.vprior) * np.eye(dim)
 
         Vn = V0 + np.einsum("ij, ik -> jk", x, x)
 
         # section 3.2 from Xuan paper:
-        return (-(dim * n / 2) * _log_pi + N0 / 2 * np.linalg.slogdet(V0)[1] -
-                scipy.special.multigammaln(N0 / 2, dim) +
-                scipy.special.multigammaln((N0 + n) / 2, dim) -
-                (N0 + n) / 2 * np.linalg.slogdet(Vn)[1])
+        return (
+            -(dim * n / 2) * _log_pi
+            + N0 / 2 * np.linalg.slogdet(V0)[1]
+            - scipy.special.multigammaln(N0 / 2, dim)
+            + scipy.special.multigammaln((N0 + n) / 2, dim)
+            - (N0 + n) / 2 * np.linalg.slogdet(Vn)[1]
+        )
 
 
-@numba.jitclass([("_data", numba.float64[:, :])])
+@numba.jitclass(
+    [
+        ("_data", numba.float64[:, :]),
+        ("dprior", numba.float64),
+        ("vprior", numba.float64),
+    ]
+)
 class FullCovObsLikelihoodNumba:
     """Full covariance model from Xuan et al.
 
     See *Xuan Xiang, Kevin Murphy: "Modeling Changing Dependency Structure
     in Multivariate Time Series", ICML (2007), pp. 1055--1062*.
     """
+
     def __init__(self, dprior, vprior):
         self._data = np.empty((0, 0))
         self.dprior = dprior
@@ -379,7 +414,7 @@ class FullCovObsLikelihoodNumba:
         dim = x.shape[1]
 
         N0 = dim * self.dprior  # optional change in prior by muliplier dprior
-        V0 = (np.var(x)*self.vprior) * np.eye(dim)
+        V0 = (np.var(x) * self.vprior) * np.eye(dim)
 
         einsum = np.zeros((x.shape[1], x.shape[1]))
         for j in range(x.shape[1]):
@@ -389,10 +424,13 @@ class FullCovObsLikelihoodNumba:
         Vn = V0 + einsum
 
         # section 3.2 from Xuan paper:
-        return (-(dim * n / 2) * _log_pi + N0 / 2 * np.linalg.slogdet(V0)[1] -
-                numba.multigammaln(N0 / 2, dim) +
-                numba.multigammaln((N0 + n) / 2, dim) -
-                (N0 + n) / 2 * np.linalg.slogdet(Vn)[1])
+        return (
+            -(dim * n / 2) * _log_pi
+            + N0 / 2 * np.linalg.slogdet(V0)[1]
+            - numba.multigammaln(N0 / 2, dim)
+            + numba.multigammaln((N0 + n) / 2, dim)
+            - (N0 + n) / 2 * np.linalg.slogdet(Vn)[1]
+        )
 
 
 class _ScipyLogsumexp:
@@ -401,6 +439,7 @@ class _ScipyLogsumexp:
     Necessary because functions cannot be passed as arguments to numba
     jitted functions, but jitclasses can.
     """
+
     def call(self, *args, **kwargs):
         return scipy.special.logsumexp(*args, **kwargs)
 
@@ -412,6 +451,7 @@ class _NumbaLogsumexp:
     Necessary because functions cannot be passed as arguments to numba
     jitted functions, but jitclasses can.
     """
+
     def __init__(self):
         pass
 
@@ -469,49 +509,55 @@ def segmentation(prior, obs_likelihood, truncate, logsumexp_wrapper):
         if t == 0:
             G[t] = g[t]
         else:
-            G[t] = np.logaddexp(G[t-1], g[t])
+            G[t] = np.logaddexp(G[t - 1], g[t])
 
-    P[n-1, n-1] = obs_likelihood.likelihood(n-1, n)
-    Q[n-1] = P[n-1, n-1]
+    P[n - 1, n - 1] = obs_likelihood.likelihood(n - 1, n)
+    Q[n - 1] = P[n - 1, n - 1]
 
-    for t in range(n-2, -1, -1):
+    for t in range(n - 2, -1, -1):
         P_next_cp = -np.inf  # == log(0)
-        for s in range(t, n-1):
-            P[t, s] = obs_likelihood.likelihood(t, s+1)
+        for s in range(t, n - 1):
+            P[t, s] = obs_likelihood.likelihood(t, s + 1)
 
             # Compute recursion
-            summand = P[t, s] + Q[s+1] + g[s+1-t]
+            summand = P[t, s] + Q[s + 1] + g[s + 1 - t]
             P_next_cp = np.logaddexp(P_next_cp, summand)
 
             # Truncate sum to become approx. linear in time (see
             # Fearnhead, 2006, eq. (3))
-            if ((np.isfinite(summand) or np.isfinite(P_next_cp)) and
-                    summand - P_next_cp < truncate):
+            if (
+                np.isfinite(summand) or np.isfinite(P_next_cp)
+            ) and summand - P_next_cp < truncate:
                 break
 
-        P[t, n-1] = obs_likelihood.likelihood(t, n)
+        P[t, n - 1] = obs_likelihood.likelihood(t, n)
 
         # (1 - G) is numerical stable until G becomes numerically 1
-        if G[n-1-t] < -1e-15:  # exp(-1e-15) = .99999...
-            antiG = np.log(1 - np.exp(G[n-1-t]))
+        if G[n - 1 - t] < -1e-15:  # exp(-1e-15) = .99999...
+            antiG = np.log(1 - np.exp(G[n - 1 - t]))
         else:
             # (1 - G) is approx. -log(G) for G close to 1
-            antiG = np.log(-G[n-1-t])
+            antiG = np.log(-G[n - 1 - t])
 
-        Q[t] = np.logaddexp(P_next_cp, P[t, n-1] + antiG)
+        Q[t] = np.logaddexp(P_next_cp, P[t, n - 1] + antiG)
 
-    Pcp = np.full((n-1, n), -np.inf)
-    for t in range(n-1):
-        Pcp[0, t+1] = P[0, t] + Q[t + 1] + g[t] - Q[0]
-        if np.isnan(Pcp[0, t+1]):
-            Pcp[0, t+1] = -np.inf
-    for j in range(1, n-1):
-        for t in range(j, n-1):
-            tmp_cond = (Pcp[j-1, j:t+1] + P[j:t+1, t] + Q[t + 1] +
-                        g[0:t-j+1] - Q[j:t+1])
-            Pcp[j, t+1] = logsumexp_wrapper.call(tmp_cond)
-            if np.isnan(Pcp[j, t+1]):
-                Pcp[j, t+1] = -np.inf
+    Pcp = np.full((n - 1, n), -np.inf)
+    for t in range(n - 1):
+        Pcp[0, t + 1] = P[0, t] + Q[t + 1] + g[t] - Q[0]
+        if np.isnan(Pcp[0, t + 1]):
+            Pcp[0, t + 1] = -np.inf
+    for j in range(1, n - 1):
+        for t in range(j, n - 1):
+            tmp_cond = (
+                Pcp[j - 1, j : t + 1]
+                + P[j : t + 1, t]
+                + Q[t + 1]
+                + g[0 : t - j + 1]
+                - Q[j : t + 1]
+            )
+            Pcp[j, t + 1] = logsumexp_wrapper.call(tmp_cond)
+            if np.isnan(Pcp[j, t + 1]):
+                Pcp[j, t + 1] = -np.inf
 
     return Q, P, Pcp
 
@@ -527,19 +573,28 @@ class BayesOffline:
     <https://github.com/hildensia/bayesian_changepoint_detection>`_ python
     package.
     """
-    prior_map = dict(const=(ConstPrior, ConstPriorNumba),
-                     geometric=(GeometricPrior, GeometricPriorNumba),
-                     neg_binomial=(NegBinomialPrior, None))
 
-    likelihood_map = dict(gauss=(GaussianObsLikelihood,
-                                 GaussianObsLikelihoodNumba),
-                          ifm=(IfmObsLikelihood, IfmObsLikelihoodNumba),
-                          full_cov=(FullCovObsLikelihood,
-                                    FullCovObsLikelihoodNumba))
+    prior_map = dict(
+        const=(ConstPrior, ConstPriorNumba),
+        geometric=(GeometricPrior, GeometricPriorNumba),
+        neg_binomial=(NegBinomialPrior, None),
+    )
 
-    def __init__(self, prior="const", obs_likelihood="gauss",
-                 prior_params={}, obs_likelihood_params={},
-                 numba_logsumexp=True, engine="numba"):
+    likelihood_map = dict(
+        gauss=(GaussianObsLikelihood, GaussianObsLikelihoodNumba),
+        ifm=(IfmObsLikelihood, IfmObsLikelihoodNumba),
+        full_cov=(FullCovObsLikelihood, FullCovObsLikelihoodNumba),
+    )
+
+    def __init__(
+        self,
+        prior="const",
+        obs_likelihood="gauss",
+        prior_params={},
+        obs_likelihood_params={},
+        numba_logsumexp=True,
+        engine="numba",
+    ):
         """Parameters
         ----------
         prior : {"const", "geometric", "neg_binomial"} or prior class, optional
@@ -606,8 +661,9 @@ class BayesOffline:
         else:
             self.logsumexp = _ScipyLogsumexp()
 
-    def find_changepoints(self, data, prob_threshold=None, full_output=False,
-                          truncate=-20):
+    def find_changepoints(
+        self, data, prob_threshold=None, full_output=False, truncate=-20
+    ):
         """Find changepoints in datasets
 
         Parameters
@@ -656,8 +712,9 @@ class BayesOffline:
         self.prior.set_data(data)
         self.obs_likelihood.set_data(data)
 
-        Q, P, Pcp = self.segmentation(self.prior, self.obs_likelihood,
-                                      truncate, self.logsumexp)
+        Q, P, Pcp = self.segmentation(
+            self.prior, self.obs_likelihood, truncate, self.logsumexp
+        )
         prob = np.exp(Pcp).sum(axis=0)
         if prob_threshold is not None:
             lmax = scipy.signal.argrelmax(prob)[0]
